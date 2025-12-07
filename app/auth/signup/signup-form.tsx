@@ -104,21 +104,62 @@ export function SignupForm({
     }
   }
 
-  async function handleSocialSignup(provider: 'google' | 'github') {
+  async function handleSocialSignup(provider: 'google' | 'facebook') {
+    // Note: Updated the provider type to include 'facebook'
+
+    if (provider === 'facebook') {
+      // 1. Explicitly handle the 'facebook' case with a clear message
+      toast.info('Feature Not Available', {
+        description:
+          'Facebook sign-in is coming soon! Please use Google or another method for now. 🛠️',
+        duration: 3000,
+      });
+      return; // Stop execution here
+    }
+
+    // Since 'facebook' is handled, we only proceed with implemented providers (like 'google')
+
     setIsLoading(true);
+
+    // Optional: Define fetchOptions here if you need to pass specific headers/params
+    // const fetchOptions = {
+    //     headers: {
+    //         'X-Custom-Auth-Param': 'value'
+    //     }
+    // };
+
     try {
       await signIn.social({
-        provider,
-        callbackURL: '/dashboard',
+        provider: provider as 'google', // Cast to the implemented type if necessary
+        callbackURL: '/dashboard/profile',
+        errorCallbackURL: '/auth/error',
+        // fetchOptions: fetchOptions, // Uncomment if needed
       });
-    } catch (err) {
-      toast.error(
-        `${provider.charAt(0).toUpperCase() + provider.slice(1)} signup failed`,
+
+      // 2. Add a success toast for initiating the redirect/sign-in process
+      toast.success(
+        `Redirecting to ${provider.charAt(0).toUpperCase() + provider.slice(1)}`,
         {
-          description: `Unable to sign up with ${provider}. Please try again.`,
+          description:
+            'Please complete the sign-in process in the pop-up or new tab.',
+          duration: 2000,
         },
       );
+    } catch (err) {
+      // 3. Improved Error Toast
+      const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+
+      toast.error(`Sign-in Failed via ${providerName}`, {
+        description:
+          'There was an issue initiating the connection. Please check your network and try again.',
+      });
+
       console.error(`${provider} signup error:`, err);
+    } finally {
+      // It's crucial to set isLoading to false ONLY if the sign-in redirection fails
+      // immediately in the try/catch block. If the sign-in succeeds and redirects,
+      // the new page load handles resetting the state. We keep it here just in case
+      // the catch block is hit.
       setIsLoading(false);
     }
   }
@@ -285,7 +326,7 @@ export function SignupForm({
                 <Button
                   variant='outline'
                   type='button'
-                  onClick={() => handleSocialSignup('github')}
+                  onClick={() => handleSocialSignup('facebook')}
                   disabled={isLoading}
                 >
                   <svg
@@ -294,10 +335,11 @@ export function SignupForm({
                     viewBox='0 0 24 24'
                     fill='currentColor'
                   >
-                    <title>GitHub</title>
-                    <path d='M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z' />
+                    <title>Facebook</title>
+                    {/* Simple vector path for the Facebook 'f' icon */}
+                    <path d='M14 13.5h2.5l1-4H14v-2c0-1.03 0-1.7 1.5-1.7h1v-3.5a2.11 2.11 0 0 0-3.5-.13c-1.8 0-3 1.08-3 3.5v2.83H7.5v4H11V24h3V13.5z' />
                   </svg>
-                  GitHub
+                  Facebook
                 </Button>
               </Field>
 

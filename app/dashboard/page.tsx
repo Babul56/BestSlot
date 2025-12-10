@@ -1,10 +1,25 @@
-import Header from '@/components/layout/header';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
 
-export default function Page() {
+export default async function ServerComponent() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    return <div>Not authenticated</div>;
+  }
+
+  if (session.user.role === 'ADMIN') {
+    return (
+      <div>
+        <h1>Admin Dashboard</h1>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <Header />
-      <div className='mt-20'>Dashboard</div>
+      <h1>Welcome {session.user.name}</h1>
     </div>
   );
 }

@@ -8,18 +8,16 @@ import {
   IconDashboard,
   IconFileText,
   IconGift,
-  IconHelp,
+  IconHelpCircle,
   IconListDetails,
   IconMail,
-  IconSearch,
-  IconSettings,
   IconUserCog,
   IconUsersPlus,
 } from '@tabler/icons-react';
 import { Dices } from 'lucide-react';
-import { NavMain } from '@/components/nav-main';
-import { NavSecondary } from '@/components/nav-secondary';
-import { NavUser } from '@/components/nav-user';
+import { NavMain } from '@/app/dashboard/nav-main';
+import { NavSecondary } from '@/app/dashboard/nav-secondary';
+import { NavUser } from '@/app/dashboard/nav-user';
 import {
   Sidebar,
   SidebarContent,
@@ -31,11 +29,6 @@ import {
 } from '@/components/ui/sidebar';
 
 const data = {
-  user: {
-    name: 'shadcn',
-    email: 'm@example.com',
-    avatar: '/avatars/shadcn.jpg',
-  },
   navMain: [
     {
       title: 'Dashboard',
@@ -96,19 +89,9 @@ const data = {
 
   navSecondary: [
     {
-      title: 'Settings',
+      title: 'Customer Support',
       url: '#',
-      icon: IconSettings,
-    },
-    {
-      title: 'Get Help',
-      url: '#',
-      icon: IconHelp,
-    },
-    {
-      title: 'Search',
-      url: '#',
-      icon: IconSearch,
+      icon: IconHelpCircle,
     },
   ],
 };
@@ -125,7 +108,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href='/'>
                 <Dices className='size-5!' />
-                <span className='text-base font-semibold'>Best Slot</span>
+                <span className='text-base font-semibold'>BestSlot</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -133,11 +116,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-
         <NavSecondary items={data.navSecondary} className='mt-auto' />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   );

@@ -1,13 +1,22 @@
-import { AppSidebar } from '@/components/app-sidebar';
-import { ChartAreaInteractive } from '@/components/chart-area-interactive';
-import { DataTable } from '@/components/data-table';
-import { SectionCards } from '@/components/section-cards';
-import { SiteHeader } from '@/components/site-header';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-
 import data from './data.json';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { AppSidebar } from './app-sidebar';
+import { SiteHeader } from './site-header';
+import { SectionCards } from './section-cards';
+import { ChartAreaInteractive } from './chart-area-interactive';
+import { DataTable } from './data-table';
 
-export default function Page() {
+export default async function Dashboard() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    redirect('/auth/login');
+  }
   return (
     <SidebarProvider
       style={

@@ -6,7 +6,7 @@ import {
   IconNotification,
   IconUserCircle,
 } from '@tabler/icons-react';
-
+import { SignOut } from '@/components/layout/header/logout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/sidebar';
 import { useSession } from '@/lib/auth-client';
 import { getInitials } from '@/lib/utils';
-import { SignOut } from '@/components/layout/header/logout';
 
 export function NavUser() {
   const { isMobile } = useSidebar();

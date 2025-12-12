@@ -28,7 +28,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-const data = {
+export const data = {
   navMain: [
     {
       title: 'Dashboard',
@@ -108,7 +108,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href='/'>
                 <Dices className='size-5!' />
-                <span className='text-base font-semibold'>BestSlot</span>
+                <h1 className='text-2xl font-bold tracking-tight md:text-2xl'>
+                  <span className='text-primary'>Best</span>
+                  <span className='font-medium'>Slot</span>
+                </h1>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

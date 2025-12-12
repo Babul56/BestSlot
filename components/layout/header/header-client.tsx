@@ -14,9 +14,7 @@ export default function HeaderClient({
         {sidebarOpen && <SidebarTrigger className='-ml-1' />}
 
         <h1 className='text-2xl font-bold tracking-tight md:text-2xl'>
-          <span className='from-primary to-primary/70 bg-linear-to-r bg-clip-text text-transparent'>
-            Best
-          </span>
+          <span className='text-primary'>Best</span>
           <span className='font-medium'>Slot</span>
         </h1>
       </Link>

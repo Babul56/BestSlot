@@ -14,8 +14,6 @@ datasource db {
 // Authentication & User Management
 // ============================================
 
-
-
 model User {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -38,12 +36,14 @@ model User {
   imageId String? @unique
   image   String?
 
-  sessions Session[]
-  accounts Account[]
-   wallet        Wallet?
-  bets          Bet[]
-  transactions  Transaction[]
-  notifications Notification[]
+  sessions       Session[]
+  accounts       Account[]
+  wallet         Wallet?
+  bets           Bet[]
+  transactions   Transaction[]
+  notifications  Notification[]
+  depositRequests DepositRequest[]
+  withdrawalRequests WithdrawalRequest[]
 
   @@index([email])
   @@index([role])
@@ -152,7 +152,7 @@ model Transaction {
   amount        Decimal           @db.Decimal(15, 2)
   balanceBefore Decimal           @db.Decimal(15, 2)
   balanceAfter  Decimal           @db.Decimal(15, 2)
-  currency      String            @default("USD")
+  currency      String            @default("BDT")
   description   String?
   metadata      Json?             // Payment gateway details, etc.
   
@@ -162,6 +162,9 @@ model Transaction {
   wallet   Wallet  @relation(fields: [walletId], references: [id], onDelete: Cascade)
   betId    String?
   bet      Bet?    @relation(fields: [betId], references: [id])
+  
+  depositRequest   DepositRequest?
+  withdrawalRequest WithdrawalRequest?
 
   @@index([userId])
   @@index([walletId])
@@ -169,6 +172,105 @@ model Transaction {
   @@index([status])
   @@index([createdAt])
   @@map("transactions")
+}
+
+// ============================================
+// DEPOSIT & WITHDRAWAL REQUESTS
+// ============================================
+
+enum PaymentMethod {
+  BKASH
+  NAGAD
+  ROCKET
+  UPAY
+  BANK_TRANSFER
+  OTHER
+}
+
+enum DepositRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model DepositRequest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // User submission data
+  amount            Decimal       @db.Decimal(15, 2)
+  paymentMethod     PaymentMethod
+  paymentTransactionId String     // bkash/nagad transaction ID from user
+  senderNumber      String        // User's payment number
+  receiverNumber    String?       // Your account number they sent to
+  
+  // Status tracking
+  status            DepositRequestStatus @default(PENDING)
+  
+  // Admin action
+  reviewedBy        String?       // Admin user ID who approved/rejected
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  adminNotes        String?
+  
+  // Proof of payment
+  proofImageUrl     String?       // Screenshot of payment
+  
+  // Relations
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId String?      @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([paymentMethod])
+  @@index([paymentTransactionId])
+  @@map("deposit_requests")
+}
+
+enum WithdrawalRequestStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+model WithdrawalRequest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // User withdrawal data
+  amount            Decimal       @db.Decimal(15, 2)
+  paymentMethod     PaymentMethod
+  accountNumber     String        // User's bkash/nagad number
+  accountName       String?       // Account holder name
+  
+  // Status tracking
+  status            WithdrawalRequestStatus @default(PENDING)
+  
+  // Admin processing
+  processedBy       String?       // Admin user ID
+  processedAt       DateTime?
+  paymentTransactionId String?    // Transaction ID after sending payment
+  rejectionReason   String?
+  adminNotes        String?
+  
+  // Relations
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId String?      @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([paymentMethod])
+  @@map("withdrawal_requests")
 }
 
 // ============================================
@@ -444,7 +546,9 @@ enum NotificationType {
   BET_WON
   BET_LOST
   DEPOSIT_SUCCESS
+  DEPOSIT_REJECTED
   WITHDRAWAL_SUCCESS
+  WITHDRAWAL_REJECTED
   EVENT_STARTING
   ODDS_CHANGED
   PROMOTION

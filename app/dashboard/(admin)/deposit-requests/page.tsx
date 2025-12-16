@@ -1,11 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-
 import {
-  useAdminDepositRequests,
-  useReviewDepositRequest,
-} from '@/services/admin/deposit';
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Loader2,
+  XCircle,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -13,17 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -33,14 +26,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  DollarSign,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-} from 'lucide-react';
+  useAdminDepositRequests,
+  useReviewDepositRequest,
+} from '@/services/admin/deposit';
 
 export default function DepositRequest() {
   const { isPending, data, isError } = useAdminDepositRequests();

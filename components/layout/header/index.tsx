@@ -3,6 +3,7 @@ import Balance from './balance';
 import HeaderClient from './header-client';
 import { ModeToggle } from './theme-toggle';
 import UserDropDown from './user';
+import Notifications from './notification';
 
 export default async function Header({
   className,
@@ -25,6 +26,7 @@ export default async function Header({
             <div className='flex flex-none items-center justify-end gap-4'>
               <div className='flex items-center gap-2'>
                 <Balance />
+                <Notifications />
                 <ModeToggle />
                 <UserDropDown />
               </div>

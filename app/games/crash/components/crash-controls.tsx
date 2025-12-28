@@ -34,10 +34,10 @@ export function CrashControls({ gameData, actions }: CrashControlsProps) {
   });
   return (
     <>
-      <div className='grid grid-cols-2 gap-6 max-w-3xl mx-auto'>
+      <div className='grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 max-w-3xl mx-auto'>
         <div className='space-y-4'>
           <Label>Bet Amount</Label>
-          <div className='flex items-center md:gap-3'>
+          <div className='flex items-center gap-3'>
             <Button
               variant='outline'
               size='icon'
@@ -76,7 +76,7 @@ export function CrashControls({ gameData, actions }: CrashControlsProps) {
             </Button>
           </div>
 
-          <div className='grid grid-cols-2 md:grid-cols-4 md:gap-2'>
+          <div className='grid grid-cols-4 gap-2'>
             {[10, 25, 50, 100].map((amount) => (
               <Button
                 key={amount}
@@ -101,7 +101,7 @@ export function CrashControls({ gameData, actions }: CrashControlsProps) {
             <Button
               onClick={placeBet}
               disabled={betAmount < 1 || betAmount > balance}
-              className='w-full h-full text-xl font-black bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-xl shadow-blue-600/40 min-h-[120px]'
+              className='w-full h-full  font-black bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-xl shadow-blue-600/40 min-h-[100px] md:min-h-[120px]'
             >
               <div>
                 <p> Place Bet</p>
@@ -113,7 +113,7 @@ export function CrashControls({ gameData, actions }: CrashControlsProps) {
           {gameState === 'waiting' && playerBet && (
             <Button
               onClick={startRound}
-              className='w-full h-full text-xl font-black bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-xl shadow-emerald-600/40 min-h-[120px]'
+              className='w-full h-full  font-black bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-xl shadow-emerald-600/40 min-h-[100px] md:min-h-[120px]'
             >
               🚀 Start Round
             </Button>
@@ -122,7 +122,7 @@ export function CrashControls({ gameData, actions }: CrashControlsProps) {
           {gameState === 'running' && playerBet && !cashedOut && (
             <Button
               onClick={() => cashOut()}
-              className='w-full h-full text-xl font-black bg-linear-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-xl shadow-amber-600/40 min-h-[120px] animate-pulse'
+              className='w-full h-full  font-black bg-linear-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-xl shadow-amber-600/40 min-h-[100px] md:min-h-[120px] animate-pulse'
             >
               <div>
                 <p>💰 Cash Out</p>
@@ -132,11 +132,15 @@ export function CrashControls({ gameData, actions }: CrashControlsProps) {
           )}
 
           {gameState === 'running' && cashedOut && (
-            <div className='flex items-center justify-center min-h-30'>
-              <p className='text-lg text-emerald-400 font-semibold'>
-                ⏳ Waiting for round to end...
-              </p>
-            </div>
+            <Button
+              onClick={() => cashOut()}
+              className='w-full h-full  font-black bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-xl shadow-emerald-600/40 min-h-[100px] md:min-h-[120px]'
+            >
+              <div>
+                <p>⏳</p>
+                <p>Waiting for round to end...</p>
+              </div>
+            </Button>
           )}
         </AnimatePresence>
       </div>

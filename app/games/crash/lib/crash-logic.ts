@@ -9,18 +9,19 @@
  * Solving for the multiplier:
  *   multiplier = (1 - houseEdge) / U, where U ~ Uniform(0, 1)
  *
- * However, to avoid infinite multipliers and improve gameplay,
- * we cap the maximum value and add a minimum threshold.
- *
- * Additionally, we apply a small probability of very high multipliers
- * (e.g., 100x+) for excitement, while keeping the expected return < 100%.
- *
  * @returns {number} Crash multiplier (>= 1.00), rounded to 2 decimal places.
  */
 export const generateCrashPoint = (): number => {
   const houseEdge = 0.03; // 3% house edge → RTP = 97%
   const minMultiplier = 1.0;
   const maxMultiplier = 1000; // Cap to prevent extreme values
+
+  // Optional: Add a tiny chance (e.g., 0.5%) of a "jackpot" multiplier
+  // This happens BEFORE the normal calculation to maintain proper RTP
+  if (Math.random() < 0.005) {
+    const jackpot = 100 + Math.random() * 900; // 100x to 1000x
+    return Math.round(jackpot * 100) / 100;
+  }
 
   // Generate uniform random number in (0, 1]
   // Use (1 - Math.random()) to avoid division by zero
@@ -31,12 +32,6 @@ export const generateCrashPoint = (): number => {
 
   // Enforce bounds
   crash = Math.max(minMultiplier, Math.min(crash, maxMultiplier));
-
-  // Optional: Add a tiny chance (e.g., 0.5%) of a "jackpot" multiplier > 100x
-  // This is for psychological excitement but keeps EV negative
-  if (Math.random() < 0.005 && crash < 100) {
-    crash = 100 + Math.random() * 900; // 100x to 1000x
-  }
 
   // Round to 2 decimal places for display consistency
   return Math.round(crash * 100) / 100;

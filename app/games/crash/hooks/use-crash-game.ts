@@ -90,12 +90,11 @@ export const useCrashGame = (
     autoCashedOutRef.current = false;
 
     let current = 1.0;
-    let ticks = 0;
     intervalRef.current = setInterval(() => {
-      ticks++;
       current += 0.01 + current * 0.005;
       multiplier.set(current);
-      planeProgress.set(Math.min(ticks / 100, 1));
+      // Synchronize plane progress with multiplier
+      planeProgress.set(Math.min((current - 1) / 9, 1));
 
       if (
         autoCashout &&

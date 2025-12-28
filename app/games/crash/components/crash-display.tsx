@@ -17,12 +17,7 @@ export function CrashDisplay({ gameData }: CrashDisplayProps) {
     showWinAnimation,
   } = gameData;
   const multiplierText = useTransform(multiplier, (v) => `${v.toFixed(2)}x`);
-  const potentialWinningsText = useTransform(multiplier, (v) => {
-    if (playerBet) {
-      return `💎 Potential: $${(playerBet * v).toFixed(2)}`;
-    }
-    return '';
-  });
+
   return (
     <div className='absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-4'>
       <AnimatePresence mode='wait'>
@@ -45,7 +40,7 @@ export function CrashDisplay({ gameData }: CrashDisplayProps) {
             className={`text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tabular-nums ${
               gameState === 'crashed'
                 ? 'text-red-500'
-                : 'bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent'
+                : 'bg-linear-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent'
             }`}
             style={{
               textShadow:
@@ -82,18 +77,6 @@ export function CrashDisplay({ gameData }: CrashDisplayProps) {
                 ? '🎮 Ready to start...'
                 : '💰 Place your bet to begin'}
             </motion.p>
-          )}
-
-          {gameState === 'running' && playerBet && !cashedOut && (
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className='mt-4 bg-blue-500/20 backdrop-blur-md rounded-xl px-6 py-3 border-2 border-blue-400/50 shadow-lg shadow-blue-500/20'
-            >
-              <motion.p className='text-xl sm:text-2xl font-bold text-blue-400'>
-                <motion.span>{potentialWinningsText}</motion.span>
-              </motion.p>
-            </motion.div>
           )}
 
           {cashedOut && (

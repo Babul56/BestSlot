@@ -40,7 +40,7 @@ export default function CrashGame() {
 
   const planeY = useTransform(
     multiplier,
-    (m) => 70 - (Math.min(m, 10) / 10) * 70,
+    (m) => 70 - ((Math.min(m, 10) - 1) / 9) * 50,
   );
   const planeRotation = gameState === 'crashed' ? 135 : -20;
 

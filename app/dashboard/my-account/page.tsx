@@ -1,5 +1,17 @@
 'use client';
 import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CheckCircle2,
+  Fingerprint,
+  Lock,
+  LogOut,
+  ShieldCheck,
+  Wallet,
+} from 'lucide-react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -14,41 +26,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { signOut } from '@/lib/auth-client';
+import { signOut, useSession } from '@/lib/auth-client';
 import { cn, getInitials } from '@/lib/utils';
 import { useUserProfile } from '@/services/user/profile';
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  CheckCircle2,
-  Fingerprint,
-  Lock,
-  LogOut,
-  ShieldCheck,
-  User,
-  Wallet,
-} from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import ActionItem from './action-items';
+import PersonalInfo from './personal-info';
 
 export default function MyAccountPage() {
-  const { isPending, data, isError } = useUserProfile();
-  const router = useRouter();
+  const { isPending: isSessionPending, data: session } = useSession();
 
-  if (isPending) return <MyAccountSkeleton />;
+  const { isPending, data, isError } = useUserProfile();
+
+  if (isPending || isSessionPending) return <MyAccountSkeleton />;
+
+  if (!session) {
+    redirect('/auth/login');
+  }
 
   if (isError || !data) {
     return (
@@ -62,7 +56,7 @@ export default function MyAccountPage() {
     await signOut({
       fetchOptions: {
         onSuccess: () => {
-          router.push('/');
+          redirect('/');
         },
       },
     });
@@ -77,17 +71,17 @@ export default function MyAccountPage() {
             <div className='flex items-center gap-4'>
               <Avatar className='h-16 w-16 border-2 border-primary/10 shadow-sm'>
                 <AvatarImage
-                  src={data.image || undefined}
+                  src={session.user.image || undefined}
                   alt={data.name || 'User'}
                 />
                 <AvatarFallback className='bg-primary/5 text-primary text-lg font-bold'>
-                  {getInitials(data.name || '')}
+                  {getInitials(session.user.name || '')}
                 </AvatarFallback>
               </Avatar>
               <div className='flex-1 min-w-0'>
                 <div className='flex items-center gap-1.5 mb-0.5'>
                   <h2 className='text-lg font-bold leading-none truncate uppercase tracking-tight'>
-                    {data.name}
+                    {session.user.name}
                   </h2>
                   {data.emailVerified && (
                     <CheckCircle2 className='size-4 text-emerald-500 shrink-0' />
@@ -183,54 +177,7 @@ export default function MyAccountPage() {
             </h3>
 
             <div className='space-y-5'>
-              <Dialog>
-                <form>
-                  <DialogTrigger asChild>
-                    <div>
-                      <ActionItem
-                        icon={<User className='text-white size-5' />}
-                        iconBg='bg-yellow-400 '
-                        title='Personal Information'
-                        description='Complete your profile to improve security.'
-                        isVerified
-                      />
-                    </div>
-                  </DialogTrigger>
-                  <DialogContent className='sm:max-w-[425px]'>
-                    <DialogHeader>
-                      <DialogTitle>Edit profile</DialogTitle>
-                      <DialogDescription>
-                        Make changes to your profile here. Click save when
-                        you&apos;re done.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className='grid gap-4'>
-                      <div className='grid gap-3'>
-                        <Label htmlFor='name-1'>Name</Label>
-                        <Input
-                          id='name-1'
-                          name='name'
-                          defaultValue='Pedro Duarte'
-                        />
-                      </div>
-                      <div className='grid gap-3'>
-                        <Label htmlFor='username-1'>Username</Label>
-                        <Input
-                          id='username-1'
-                          name='username'
-                          defaultValue='@peduarte'
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button variant='outline'>Cancel</Button>
-                      </DialogClose>
-                      <Button type='submit'>Save changes</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </form>
-              </Dialog>
+              <PersonalInfo />
 
               <ActionItem
                 icon={<Lock className='text-white size-5' />}
@@ -302,41 +249,6 @@ export default function MyAccountPage() {
   );
 }
 
-function ActionItem({
-  icon,
-  iconBg,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  title: string;
-  description: string;
-  isVerified?: boolean;
-  hideCheck?: boolean;
-}) {
-  return (
-    <div className='flex items-start gap-4 group cursor-pointer'>
-      <div
-        className={cn(
-          'flex items-center justify-center size-10 rounded-full shrink-0 shadow-lg transition-transform group-hover:scale-110',
-          iconBg,
-        )}
-      >
-        {icon}
-      </div>
-      <div className='flex-1 min-w-0 border-b  pb-3'>
-        <div className='flex items-center gap-2'>
-          <h4 className='text-sm font-bold '>{title}</h4>
-        </div>
-        <p className='text-xs text-muted-foreground line-clamp-1'>
-          {description}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function StatCard({
   label,
   count,
@@ -391,10 +303,10 @@ function MyAccountSkeleton() {
             </div>
           </div>
           <div className='p-6 border-r'>
-            <Skeleton className='h-full w-full min-h-[300px]' />
+            <Skeleton className='h-full w-full min-h-75' />
           </div>
           <div className='p-6'>
-            <Skeleton className='h-full w-full min-h-[300px]' />
+            <Skeleton className='h-full w-full min-h-75' />
           </div>
         </CardContent>
       </Card>

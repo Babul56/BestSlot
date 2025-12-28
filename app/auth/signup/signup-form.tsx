@@ -110,7 +110,7 @@ export function SignupForm({
     try {
       await signIn.social({
         provider: provider as 'google', // Cast to the implemented type if necessary
-        callbackURL: '/dashboard/profile',
+        callbackURL: '/dashboard/my-account',
         errorCallbackURL: '/auth/error',
         // fetchOptions: fetchOptions, // Uncomment if needed
       });

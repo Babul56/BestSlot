@@ -103,7 +103,7 @@ export function LoginForm({
         description: 'Redirecting you to your Profile...',
       });
 
-      router.push('/dashboard/profile');
+      router.push('/dashboard/my-account');
     } catch (err) {
       toast.error('Unexpected error', {
         description: 'An unexpected error occurred. Please try again.',
@@ -120,7 +120,7 @@ export function LoginForm({
     try {
       await signIn.social({
         provider: provider,
-        callbackURL: '/dashboard/profile',
+        callbackURL: '/dashboard/my-account',
         errorCallbackURL: '/auth/error',
       });
 

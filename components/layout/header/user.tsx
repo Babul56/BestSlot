@@ -131,7 +131,7 @@ export default function UserDropDown() {
 
           <DropdownMenuItem asChild>
             <Link
-              href='/dashboard/profile'
+              href='/dashboard/my-account'
               className='flex w-full cursor-pointer items-center'
             >
               <UserCog className='text-primary/70 mr-2 h-4 w-4' />

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useSession } from '@/lib/auth-client';
 import type { CrashGameActions, CrashGameData } from '../hooks/use-crash-game';
 
 type CrashControlsProps = {
@@ -15,8 +16,9 @@ type CrashControlsProps = {
 };
 
 export function CrashControls({ gameData, actions }: CrashControlsProps) {
+  const { data: session } = useSession();
   const {
-    balance,
+    balance: userBalance,
     betAmount,
     autoCashout,
     gameState,
@@ -26,6 +28,7 @@ export function CrashControls({ gameData, actions }: CrashControlsProps) {
     isPlacingBet,
     isCashingOut,
   } = gameData;
+  const balance = session ? userBalance : Infinity;
   const { setBetAmount, setAutoCashout, placeBet, startRound, cashOut } =
     actions;
   const cashOutText = useTransform(multiplier, (v) => {

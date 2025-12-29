@@ -2,6 +2,8 @@
 
 import { type MotionValue, useMotionValue } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { useSession } from '@/lib/auth-client';
 import {
   useBetPlacementMutation,
   useCashoutMutation,
@@ -39,6 +41,7 @@ export const useCrashGame = (
   initialBalance: number,
   createExplosion: (x: number, y: number) => void,
 ): [CrashGameData, CrashGameActions] => {
+  const { data: session } = useSession();
   const [balance, setBalance] = useState(initialBalance);
   const [betAmount, setBetAmount] = useState(10);
   const [autoCashout, setAutoCashout] = useState<number | null>(null);
@@ -103,6 +106,10 @@ export const useCrashGame = (
   );
 
   const placeBet = useCallback(() => {
+    if (!session) {
+      toast.error('You need to login to continue');
+      return;
+    }
     if (
       betAmount < 10 ||
       betAmount > balance ||
@@ -119,6 +126,7 @@ export const useCrashGame = (
     };
     placeBetMutate(payload);
   }, [
+    session,
     betAmount,
     balance,
     gameState,

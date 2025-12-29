@@ -4,6 +4,7 @@ import { motion, useTransform } from 'framer-motion';
 import { useCallback, useRef } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { useSession } from '@/lib/auth-client';
 import { useUserBalance } from '@/services/user/wallet';
 import { CrashCanvas } from './components/crash-canvas';
 import { CrashControls } from './components/crash-controls';
@@ -79,7 +80,14 @@ function CrashGameContent({ balance }: { balance: number }) {
 }
 
 export default function CrashGame() {
+  const { isPending: isSessionPending, data: session } = useSession();
   const { isPending, data, isError } = useUserBalance();
-  if (isPending || isError) return null;
-  return <CrashGameContent balance={data.balance} />;
+
+  if (isSessionPending || (session && isPending)) {
+    return null; // Shows nothing while loading session, or balance for logged in user
+  }
+
+  const balance = session && data && !isError ? data.balance : 0;
+
+  return <CrashGameContent balance={balance} />;
 }

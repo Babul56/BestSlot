@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { usePresenceStore } from '@/lib/store/presenceStore';
 import { cn } from '@/lib/utils';
 import {
   Clock,
@@ -24,13 +25,9 @@ import {
   X,
 } from 'lucide-react';
 import * as React from 'react';
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'support';
-  timestamp: Date;
-}
+import { Conversation, Message } from '@prisma/client';
+import { useSession } from '@/lib/auth-client';
+import { Spinner } from '@/components/ui/spinner';
 
 const QUICK_ACTIONS = [
   { label: 'Account Help', icon: User },
@@ -46,12 +43,25 @@ const SUPPORT_INFO = {
   hours: 'Mon-Sun, 24/7',
 };
 
+type MessageWithSender = Message & {
+    sender: {
+        id: string;
+        name: string | null;
+        image: string | null;
+        role: string;
+    }
+}
+
 export function ChatBox() {
-  const [messages, setMessages] = React.useState<Message[]>([]);
+  const { data: session, isPending: isSessionPending } = useSession();
+  const { ably } = usePresenceStore();
+  const [conversation, setConversation] = React.useState<Conversation | null>(null);
+  const [messages, setMessages] = React.useState<MessageWithSender[]>([]);
   const [input, setInput] = React.useState('');
   const [isOpen, setIsOpen] = React.useState(false);
-  const [isTyping, setIsTyping] = React.useState(false);
-  const [showWelcome, setShowWelcome] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
 
   const scrollAnchorRef = React.useRef<HTMLDivElement>(null);
 
@@ -59,61 +69,188 @@ export function ChatBox() {
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: this is fine
   React.useEffect(() => {
     if (isOpen) {
       scrollToBottom();
     }
   }, [messages, isOpen]);
 
-  const handleQuickAction = (action: string) => {
-    setShowWelcome(false);
-    const userMessage: Message = {
-      id: window.crypto.randomUUID(),
-      text: `I need help with: ${action}`,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-    setMessages([userMessage]);
-    simulateSupportResponse();
-  };
+  const initConversation = React.useCallback(async () => {
+    if (!isOpen || !session) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/chat/conversations', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to start conversation.');
+      const conv: Conversation = await res.json();
+      setConversation(conv);
 
-  const simulateSupportResponse = () => {
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const supportReply: Message = {
+      const messagesRes = await fetch(`/api/chat/conversations/${conv.id}`);
+      if (!messagesRes.ok) throw new Error('Failed to fetch messages.');
+      const fullConvData: Conversation & { messages: MessageWithSender[]} = await messagesRes.json();
+      setMessages(fullConvData.messages);
+
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOpen, session]);
+
+  React.useEffect(() => {
+    if(!isSessionPending){
+        initConversation();
+    }
+  }, [initConversation, isSessionPending]);
+
+
+  React.useEffect(() => {
+    if (!ably || !conversation?.id) return;
+
+    const channel = ably.channels.get(`chat:${conversation.id}`);
+
+    const handleNewMessage = (message: Ably.Types.Message) => {
+        setMessages(prev => [...prev, message.data as MessageWithSender]);
+    }
+
+    channel.subscribe('new-message', handleNewMessage);
+
+    return () => {
+      channel.unsubscribe('new-message', handleNewMessage);
+    };
+  }, [ably, conversation?.id]);
+
+
+  const handleSend = async () => {
+    if (!input.trim() || !conversation?.id || !session?.user) return;
+
+    const optimisticMessage: MessageWithSender = {
         id: window.crypto.randomUUID(),
-        text: 'Thanks for reaching out! An agent will be with you shortly to assist with your request.',
-        sender: 'support',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, supportReply]);
-    }, 1500);
+        content: input,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        conversationId: conversation.id,
+        senderId: session.user.id,
+        isRead: false,
+        readAt: null,
+        type: 'TEXT',
+        fileUrl: null,
+        fileName: null,
+        fileSize: null,
+        sender: {
+            id: session.user.id,
+            name: session.user.name,
+            image: session.user.image,
+            role: 'USER'
+        }
+    };
+    setMessages(prev => [...prev, optimisticMessage]);
+    setInput('');
+
+    try {
+      await fetch(`/api/chat/conversations/${conversation.id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: input }),
+      });
+    } catch (e) {
+        setError("Failed to send message.");
+        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+    }
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-
-    setShowWelcome(false);
-    const userMessage: Message = {
-      id: window.crypto.randomUUID(),
-      text: input,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    simulateSupportResponse();
+  const handleQuickAction = (action: string) => {
+    setInput(`I need help with: ${action}`);
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
+    return new Date(date).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
+
+  const renderContent = () => {
+    if (isSessionPending) {
+        return <div className="flex justify-center items-center h-full"><Spinner /></div>;
+    }
+    if (!session) {
+        return <div className="text-center p-4">Please <a href="/auth/signin" className="underline text-primary">sign in</a> to start a chat.</div>
+    }
+    if (loading) {
+        return <div className="flex justify-center items-center h-full"><Spinner /></div>;
+    }
+    if (error) {
+        return <div className="text-red-500 text-center p-4">{error}</div>
+    }
+    if (messages.length === 0) {
+        return (
+            <div className='space-y-4 animate-in fade-in-50 slide-in-from-bottom-4'>
+              <div className='bg-linear-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4 space-y-3'>
+                <div className='flex items-center gap-2'>
+                  <MessageSquare className='h-5 w-5 text-primary' />
+                  <h3 className='font-semibold text-sm'>
+                    Welcome to Support Chat
+                  </h3>
+                </div>
+                <p className='text-sm text-muted-foreground leading-relaxed'>
+                  Our team is here to help you 24/7. Choose a topic below or
+                  type your question.
+                </p>
+              </div>
+
+              <div className='space-y-2'>
+                <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide px-1'>
+                  Quick Actions
+                </p>
+                <div className='grid grid-cols-2 gap-2'>
+                  {QUICK_ACTIONS.map((action) => (
+                    <Button
+                      key={action.label}
+                      variant='outline'
+                      className='h-auto py-3 px-3 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5 transition-all group'
+                      onClick={() => handleQuickAction(action.label)}
+                    >
+                      <action.icon className='h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors' />
+                      <span className='text-xs font-medium'>
+                        {action.label}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+        )
+    }
+    return (
+        <>
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={cn(
+                  'flex flex-col gap-1',
+                  m.senderId === session?.user.id ? 'items-end' : 'items-start',
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-fit max-w-[85%] rounded-2xl px-4 py-2.5 text-sm wrap-break-word shadow-sm animate-in fade-in-50 slide-in-from-bottom-2',
+                    m.senderId === session?.user.id
+                      ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                      : 'bg-background border rounded-tl-sm',
+                  )}
+                >
+                  {m.content}
+                </div>
+                <span className='text-[10px] text-muted-foreground px-2'>
+                  {formatTime(m.createdAt)}
+                </span>
+              </div>
+            ))}
+        </>
+    )
+
+  }
 
   if (!isOpen) {
     return (
@@ -171,89 +308,7 @@ export function ChatBox() {
       <CardContent className='flex-1 overflow-hidden p-0 bg-muted/20'>
         <ScrollArea className='h-full'>
           <div className='p-4 flex flex-col gap-4'>
-            {showWelcome && messages.length === 0 && (
-              <div className='space-y-4 animate-in fade-in-50 slide-in-from-bottom-4'>
-                <div className='bg-linear-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4 space-y-3'>
-                  <div className='flex items-center gap-2'>
-                    <MessageSquare className='h-5 w-5 text-primary' />
-                    <h3 className='font-semibold text-sm'>
-                      Welcome to Support Chat
-                    </h3>
-                  </div>
-                  <p className='text-sm text-muted-foreground leading-relaxed'>
-                    Our team is here to help you 24/7. Choose a topic below or
-                    type your question.
-                  </p>
-                </div>
-
-                <div className='space-y-2'>
-                  <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide px-1'>
-                    Quick Actions
-                  </p>
-                  <div className='grid grid-cols-2 gap-2'>
-                    {QUICK_ACTIONS.map((action) => (
-                      <Button
-                        key={action.label}
-                        variant='outline'
-                        className='h-auto py-3 px-3 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5 transition-all group'
-                        onClick={() => handleQuickAction(action.label)}
-                      >
-                        <action.icon className='h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors' />
-                        <span className='text-xs font-medium'>
-                          {action.label}
-                        </span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={cn(
-                  'flex flex-col gap-1',
-                  m.sender === 'user' ? 'items-end' : 'items-start',
-                )}
-              >
-                <div
-                  className={cn(
-                    'w-fit max-w-[85%] rounded-2xl px-4 py-2.5 text-sm wrap-break-word shadow-sm animate-in fade-in-50 slide-in-from-bottom-2',
-                    m.sender === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                      : 'bg-background border rounded-tl-sm',
-                  )}
-                >
-                  {m.text}
-                </div>
-                <span className='text-[10px] text-muted-foreground px-2'>
-                  {formatTime(m.timestamp)}
-                </span>
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className='flex items-start gap-2 animate-in fade-in-50 slide-in-from-bottom-2'>
-                <div className='bg-background border rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm'>
-                  <div className='flex gap-1'>
-                    <span
-                      className='h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce'
-                      style={{ animationDelay: '0ms' }}
-                    />
-                    <span
-                      className='h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce'
-                      style={{ animationDelay: '150ms' }}
-                    />
-                    <span
-                      className='h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce'
-                      style={{ animationDelay: '300ms' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
+            {renderContent()}
             <div ref={scrollAnchorRef} />
           </div>
         </ScrollArea>
@@ -273,11 +328,12 @@ export function ChatBox() {
             onChange={(e) => setInput(e.target.value)}
             className='flex-1 border-muted focus-visible:ring-primary h-11 rounded-xl'
             autoFocus
+            disabled={!conversation || loading || !session}
           />
           <Button
             type='submit'
             size='icon'
-            disabled={!input.trim()}
+            disabled={!input.trim() || !conversation || loading || !session}
             className='shrink-0 h-11 w-11 rounded-xl bg-primary hover:bg-primary/90 transition-all disabled:opacity-50 shadow-sm'
           >
             <Send className='h-4 w-4' />

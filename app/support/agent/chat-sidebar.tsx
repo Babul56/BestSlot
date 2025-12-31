@@ -23,8 +23,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { usePresenceStore } from '@/lib/store/presenceStore';
 import { cn } from '@/lib/utils';
-import { usePresenceStore } from '@/store/presenceStore';
 
 interface User {
   id: string;

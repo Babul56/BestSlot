@@ -1,9 +1,12 @@
-import { useUserAbly } from '@/hooks/use-user-ably';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useSession } from '@/lib/auth-client';
+import { usePresenceStore } from '@/lib/store/presenceStore';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+// Assuming these types are defined somewhere, possibly from Prisma
+// For now, defining them here based on usage in the original hook.
 interface User {
   id: string;
   name: string | null;
@@ -28,36 +31,28 @@ interface ConversationDisplay {
   messages: MessageForPreview[];
 }
 
-export async function useConversations() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session || !session.user || !session.user.id) {
-    redirect('/auth/signin');
-  }
-  const currentUserId = session?.user?.id;
-
+export function useConversations() {
+  const { data: session, isPending: isSessionPending } = useSession();
+  const router = useRouter();
   const [conversations, setConversations] = useState<ConversationDisplay[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { ably, isConnected } = useUserAbly();
+  const { ably, isConnected } = usePresenceStore();
+
+  const currentUserId = session?.user?.id;
 
   const fetchConversations = useCallback(async () => {
     if (!currentUserId) return;
 
     try {
       setIsLoading(true);
-      const response = await fetch('/api/chat/conversations', {
-        cache: 'no-store',
-      });
+      const response = await fetch('/api/chat/conversations');
       if (!response.ok) {
         throw new Error('Failed to fetch conversations');
       }
       const data = await response.json();
       setConversations(data);
-      // biome-ignore lint: error
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -66,16 +61,23 @@ export async function useConversations() {
   }, [currentUserId]);
 
   useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+    if (!isSessionPending && !session) {
+      router.push('/auth/signin');
+    }
+    if (session) {
+      fetchConversations();
+    }
+  }, [session, isSessionPending, fetchConversations, router]);
 
   useEffect(() => {
     if (!ably || !isConnected || !currentUserId) {
       return;
     }
 
+    // This subscription seems to be for an agent/admin to get real-time updates
+    // on all conversations. A user-specific channel is appropriate here.
     const channel = ably.channels.get(`user:${currentUserId}`);
-    // biome-ignore lint: error
+
     const handleNewMessage = (message: any) => {
       const newConversation = message.data;
       setConversations((prev) => {
@@ -95,10 +97,10 @@ export async function useConversations() {
       });
     };
 
-    channel.subscribe('new-message', handleNewMessage);
+    channel.subscribe('new-conversation-update', handleNewMessage);
 
     return () => {
-      channel.unsubscribe('new-message', handleNewMessage);
+      channel.unsubscribe('new-conversation-update', handleNewMessage);
     };
   }, [ably, isConnected, currentUserId]);
 

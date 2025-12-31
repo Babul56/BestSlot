@@ -5,6 +5,7 @@ import './globals.css';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
+import { PresenceProvider } from '@/context/presence-provider';
 import TanstackProvider from '@/context/tanstack-provider';
 
 const geistSans = Geist({
@@ -30,21 +31,23 @@ export default function RootLayout({
   return (
     <html lang='en' suppressHydrationWarning>
       <TanstackProvider>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          <ThemeProvider
-            attribute='class'
-            defaultTheme='system'
-            enableSystem
-            disableTransitionOnChange
+        <PresenceProvider>
+          <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           >
-            {children}
+            <ThemeProvider
+              attribute='class'
+              defaultTheme='system'
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
 
-            <Toaster richColors />
-            <ReactQueryDevtools initialIsOpen={false} />
-          </ThemeProvider>
-        </body>
+              <Toaster richColors />
+              <ReactQueryDevtools initialIsOpen={false} />
+            </ThemeProvider>
+          </body>
+        </PresenceProvider>
       </TanstackProvider>
     </html>
   );

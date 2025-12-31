@@ -1,60 +1,55 @@
-# Crash Game Backend Integration - TODO
+# Live Support Chat Implementation Plan
 
-This document outlines the steps to integrate the Crash game with a backend for secure balance management and server-side game logic, transforming it into a secure single-player experience.
+## Backend (API Routes)
+-   [ ] **`POST /api/support/conversations`**: Create a new conversation. This should create a new conversation in the database and return the `conversationId`.
+-   [ ] **`GET /api/support/conversations`**: Fetch all conversations for the support agent dashboard.
+-   [ ] **`GET /api/support/conversations/[conversationId]`**: Fetch messages for a specific conversation.
+-   [ ] **`POST /api/support/conversations/[conversationId]/messages`**: Send a new message. This endpoint will receive the message, save it to the database, and then publish it to the appropriate Ably channel.
+-   [ ] **`GET /api/ably/auth`**: Create an API endpoint to authenticate clients with Ably. This is crucial for securing the chat.
 
-## High-Level Plan
+## Frontend (React Components & Hooks)
 
-1.  **Backend API Setup:** Create new API endpoints that handle balance retrieval, placing bets, and cashing out. These will interact with your database (Neon DB). The crucial `generateCrashPoint` logic will also move to the backend.
-2.  **Frontend Adaptation:** Modify your existing React components and `useCrashGame` hook to communicate with these new backend APIs. The frontend will become a display layer that sends user actions and renders server-provided game state and balance.
+### User-Facing Chat
+-   [ ] Create a `SupportButton` component that, when clicked, initiates a new chat conversation.
+-   [ ] Create a `UserChatBox` component that appears when a chat is active.
+-   [ ] Inside `UserChatBox`, implement logic to:
+    -   [ ] Fetch chat history.
+    -   [ ] Connect to the conversation's Ably channel.
+    -   [ ] Display messages.
+    -   [ ] Send new messages via the API.
+    -   [ ] Receive real-time messages from the agent.
 
-## Detailed Steps
+### Agent-Facing Dashboard
+-   [ ] **`app/support/agent/chat-sidebar.tsx`**:
+    -   [ ] Fetch and display a list of all support conversations.
+    -   [ ] Indicate which conversations have unread messages.
+    -   [ ] Allow agents to select a conversation to view.
+-   [ ] **`app/support/agent/[conversationId]/chat-conversation.tsx`**:
+    -   [ ] Fetch and display the message history for the selected conversation.
+    -   [ ] Connect to the conversation's Ably channel.
+    -   [ ] Implement a message input form to send replies.
+    -   [ ] Receive real-time messages from the user.
+-   [ ] **`app/support/agent/[conversationId]/chat-header.tsx`**:
+    -   [ ] Display information about the user in the current conversation.
 
-### Backend Integration
+## Ably Real-time Integration
+-   [ ] **Ably Provider**: Create an `AblyProvider` component to wrap the application and provide an Ably client instance.
+-   [ ] **`hooks/use-ably-channel.ts`**: Create a custom hook to encapsulate the logic for subscribing to an Ably channel, receiving messages, and unsubscribing on component unmount.
+-   [ ] **Publishing from Backend**: Ensure the `POST /api/support/conversations/[conversationId]/messages` endpoint correctly publishes messages to the Ably channel after saving them.
+-   [ ] **Client-side Subscriptions**: Use the `use-ably-channel.ts` hook in both the user and agent chat components to receive messages in real-time.
 
-*   **Create API Route for Fetching User Balance:**
-    *   Create a new API route (e.g., `app/api/users/balance/route.ts`) to securely fetch the user's current balance from the database.
-    *   This API should return the current balance for the authenticated user.
-*   **Create API Route for Placing a Bet:**
-    *   Create a new API route (e.g., `app/api/games/crash/bet/route.ts`).
-    *   This endpoint will:
-        *   Receive bet amount and user identifier.
-        *   Validate the bet against the user's current balance.
-        *   Deduct the bet amount from the user's balance in the database.
-        *   Generate a unique server-side `crashPoint` using logic similar to `generateCrashPoint` but on the server.
-        *   Store the game session details (e.g., `gameSessionId`, `crashPoint`, `betAmount`, `userId`) in the database.
-        *   Return a `gameSessionId` and the initial game state (e.g., multiplier starting at 1.0x).
-*   **Create API Route for Cashing Out:**
-    *   Create a new API route (e.g., `app/api/games/crash/cashout/route.ts`).
-    *   This endpoint will:
-        *   Receive the `gameSessionId` and the `multiplierAtCashout` from the client.
-        *   Validate the `gameSessionId` and ensure the game is still active and hasn't already crashed on the server.
-        *   Calculate the winnings based on the `betAmount` and `multiplierAtCashout` (retrieved from the stored `gameSessionId`).
-        *   Add the winnings to the user's balance in the database.
-        *   Mark the `gameSession` as completed/cashed out in the database.
-        *   Return the updated user balance and the winnings.
-*   **Move `generateCrashPoint` Logic to Backend:**
-    *   Ensure that the `generateCrashPoint` logic is *only* executed on the server within the "place bet" API route.
-    *   The client should not have access to this function to prevent manipulation.
-
-### Frontend Adaptation
-
-*   **Remove Client-Side `generateCrashPoint`:**
-    *   Delete or comment out the `generateCrashPoint` function in `app/games/crash/lib/crash-logic.ts`.
-*   **Refactor `useCrashGame` Hook:**
-    *   **Fetch Initial Balance:** In `useCrashGame`, replace the `useState(initialBalance)` with a call to the new "fetch user balance" API. Use a loading state while fetching.
-    *   **`placeBet` Modification:**
-        *   When `placeBet` is called, make an API call to the new "place bet" backend endpoint, sending the `betAmount`.
-        *   Upon a successful response, update the local `balance` state with the new, reduced balance from the backend.
-        *   Store the `gameSessionId` received from the backend in the component's state.
-        *   The client-side `gameState` should transition to 'running', and the `multiplier` should start incrementing locally.
-    *   **`cashOut` Modification:**
-        *   When `cashOut` is called, make an API call to the new "cash out" backend endpoint, sending the `gameSessionId` and the current `multiplier.get()`.
-        *   Upon a successful response, update the local `balance` state with the new balance from the backend.
-        *   Handle potential errors (e.g., if the game already crashed on the server).
-    *   **Game Loop Logic Adjustment:**
-        *   The client-side `multiplier` will continue to increment locally for visual effect.
-        *   The client will *not* know the server-side `crashPoint` until the backend decides the round is over (either via a cashout or a crash).
-        *   When the local multiplier exceeds the server-determined `crashPoint` (which the backend would communicate if the player *didn't* cash out), the client should visually crash the game. This means the client needs to receive the `crashPoint` from the server *after* a bet is placed, allowing the client to run its visual simulation up to that point.
-*   **Update `page.tsx`:**
-    *   Ensure the `useCrashGame` hook receives the user's initial balance from the API (once implemented).
-    *   Display the balance and game state correctly, reflecting the data provided by the backend APIs.
+## Database (Prisma Schema)
+-   [ ] **`Conversation` model**:
+    -   `id` (PK)
+    -   `userId` (FK to User)
+    -   `createdAt`
+    -   `updatedAt`
+    -   `status` (e.g., `OPEN`, `CLOSED`)
+-   [ ] **`Message` model**:
+    -   `id` (PK)
+    -   `content` (String)
+    -   `createdAt`
+    -   `conversationId` (FK to Conversation)
+    -   `senderId` (FK to User - could be user or agent)
+    -   `read` (Boolean, to track if the message has been read)
+-   [ ] Update `prisma/schema.prisma` and run `prisma migrate`.

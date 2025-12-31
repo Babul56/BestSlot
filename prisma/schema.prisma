@@ -48,6 +48,10 @@ model User {
   @@index([email])
   @@index([role])
   @@map("users")
+  messages Message[] @relation("SentMessages")
+  conversations Conversation[] @relation("UserConversations")
+  assignedConversations Conversation[]  @relation("AssignedConversations")
+
 }
 
 model Session {
@@ -646,4 +650,90 @@ model UserPromotion {
   @@index([promotionId])
   @@index([status])
   @@map("user_promotions")
+}
+
+// ============================================
+// CHAT & SUPPORT SYSTEM
+// ============================================
+
+enum ConversationStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ConversationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject  String?
+  status   ConversationStatus @default(OPEN)
+  priority ConversationPriority @default(NORMAL)
+  
+  // Optional: Track which admin is handling this conversation
+  assignedToId String? // Admin user ID
+  assignedTo   User?   @relation("AssignedConversations", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedAt   DateTime?
+
+  // Track last activity for sorting
+  lastMessageAt DateTime @default(now())
+  
+  // User who initiated the conversation
+  userId String
+  user   User   @relation("UserConversations", fields: [userId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+
+  @@index([userId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM // For automated messages like "Admin joined the chat"
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  content  String
+  type     MessageType @default(TEXT)
+  
+  // File/image metadata if applicable
+  fileUrl  String?
+  fileName String?
+  fileSize Int?
+  
+  // Track if message has been read
+  isRead   Boolean  @default(false)
+  readAt   DateTime?
+
+  // Who sent the message
+  senderId String
+  sender   User   @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  // Which conversation this belongs to
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
 }

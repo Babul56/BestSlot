@@ -16,6 +16,7 @@ import { ChatInput } from './chat-input';
 import { ChatMessages } from './chat-messages';
 import { ChatLoadingSkeleton } from './chat-skeleton';
 import { ConnectionStatus } from './connection-status';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserContext } from './user-context';
 
 export default function ChatConversation() {
@@ -107,8 +108,8 @@ export default function ChatConversation() {
   }
 
   return (
-    <main className='grid grid-cols-12'>
-      <div className='col-span-8 from-background to-muted/20 flex h-full flex-col bg-linear-to-br'>
+    <main className='flex h-full w-full'>
+      <div className='flex-1 from-background to-muted/20 flex h-full flex-col bg-linear-to-br'>
         <ChatHeader conversation={conversation} onBack={handleBackNavigation} />
 
         <ConnectionStatus
@@ -133,7 +134,16 @@ export default function ChatConversation() {
           session={session}
         />
       </div>
-      <UserContext />
+      <div className='hidden h-full w-96 flex-col border-l border-border bg-card/50 lg:flex'>
+        <div className='border-b border-border p-4'>
+          <h2 className='text-lg font-semibold'>Customer Profile</h2>
+        </div>
+        <ScrollArea className='flex-1'>
+          <div className='p-4'>
+            <UserContext />
+          </div>
+        </ScrollArea>
+      </div>
     </main>
   );
 }

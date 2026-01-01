@@ -1,3 +1,9 @@
+import { ConversationListSkeleton } from './chat-skeleton';
+
 export default function Loading() {
-  return null;
+  return (
+    <div className='lg:hidden'>
+      <ConversationListSkeleton />
+    </div>
+  );
 }

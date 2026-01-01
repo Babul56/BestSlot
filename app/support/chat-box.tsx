@@ -11,6 +11,9 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Spinner } from '@/components/ui/spinner';
+import { useSession } from '@/lib/auth-client';
+import type { Conversation, Message } from '@/lib/generated/prisma/client';
 import { usePresenceStore } from '@/lib/store/presenceStore';
 import { cn } from '@/lib/utils';
 import {
@@ -25,9 +28,6 @@ import {
   X,
 } from 'lucide-react';
 import * as React from 'react';
-import { Conversation, Message } from '@prisma/client';
-import { useSession } from '@/lib/auth-client';
-import { Spinner } from '@/components/ui/spinner';
 
 const QUICK_ACTIONS = [
   { label: 'Account Help', icon: User },
@@ -44,24 +44,25 @@ const SUPPORT_INFO = {
 };
 
 type MessageWithSender = Message & {
-    sender: {
-        id: string;
-        name: string | null;
-        image: string | null;
-        role: string;
-    }
-}
+  sender: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    role: string;
+  };
+};
 
 export function ChatBox() {
   const { data: session, isPending: isSessionPending } = useSession();
   const { ably } = usePresenceStore();
-  const [conversation, setConversation] = React.useState<Conversation | null>(null);
+  const [conversation, setConversation] = React.useState<Conversation | null>(
+    null,
+  );
   const [messages, setMessages] = React.useState<MessageWithSender[]>([]);
   const [input, setInput] = React.useState('');
   const [isOpen, setIsOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-
 
   const scrollAnchorRef = React.useRef<HTMLDivElement>(null);
 
@@ -87,9 +88,9 @@ export function ChatBox() {
 
       const messagesRes = await fetch(`/api/chat/conversations/${conv.id}`);
       if (!messagesRes.ok) throw new Error('Failed to fetch messages.');
-      const fullConvData: Conversation & { messages: MessageWithSender[]} = await messagesRes.json();
+      const fullConvData: Conversation & { messages: MessageWithSender[] } =
+        await messagesRes.json();
       setMessages(fullConvData.messages);
-
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -98,11 +99,10 @@ export function ChatBox() {
   }, [isOpen, session]);
 
   React.useEffect(() => {
-    if(!isSessionPending){
-        initConversation();
+    if (!isSessionPending) {
+      initConversation();
     }
   }, [initConversation, isSessionPending]);
-
 
   React.useEffect(() => {
     if (!ably || !conversation?.id) return;
@@ -110,8 +110,8 @@ export function ChatBox() {
     const channel = ably.channels.get(`chat:${conversation.id}`);
 
     const handleNewMessage = (message: Ably.Types.Message) => {
-        setMessages(prev => [...prev, message.data as MessageWithSender]);
-    }
+      setMessages((prev) => [...prev, message.data as MessageWithSender]);
+    };
 
     channel.subscribe('new-message', handleNewMessage);
 
@@ -120,31 +120,30 @@ export function ChatBox() {
     };
   }, [ably, conversation?.id]);
 
-
   const handleSend = async () => {
     if (!input.trim() || !conversation?.id || !session?.user) return;
 
     const optimisticMessage: MessageWithSender = {
-        id: window.crypto.randomUUID(),
-        content: input,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        conversationId: conversation.id,
-        senderId: session.user.id,
-        isRead: false,
-        readAt: null,
-        type: 'TEXT',
-        fileUrl: null,
-        fileName: null,
-        fileSize: null,
-        sender: {
-            id: session.user.id,
-            name: session.user.name,
-            image: session.user.image,
-            role: 'USER'
-        }
+      id: window.crypto.randomUUID(),
+      content: input,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      conversationId: conversation.id,
+      senderId: session.user.id,
+      isRead: false,
+      readAt: null,
+      type: 'TEXT',
+      fileUrl: null,
+      fileName: null,
+      fileSize: null,
+      sender: {
+        id: session.user.id,
+        name: session.user.name,
+        image: session.user.image,
+        role: 'USER',
+      },
     };
-    setMessages(prev => [...prev, optimisticMessage]);
+    setMessages((prev) => [...prev, optimisticMessage]);
     setInput('');
 
     try {
@@ -154,8 +153,8 @@ export function ChatBox() {
         body: JSON.stringify({ content: input }),
       });
     } catch (e) {
-        setError("Failed to send message.");
-        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+      setError('Failed to send message.');
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
     }
   };
 
@@ -172,85 +171,96 @@ export function ChatBox() {
 
   const renderContent = () => {
     if (isSessionPending) {
-        return <div className="flex justify-center items-center h-full"><Spinner /></div>;
+      return (
+        <div className='flex justify-center items-center h-full'>
+          <Spinner />
+        </div>
+      );
     }
     if (!session) {
-        return <div className="text-center p-4">Please <a href="/auth/signin" className="underline text-primary">sign in</a> to start a chat.</div>
+      return (
+        <div className='text-center p-4'>
+          Please{' '}
+          <a href='/auth/signin' className='underline text-primary'>
+            sign in
+          </a>{' '}
+          to start a chat.
+        </div>
+      );
     }
     if (loading) {
-        return <div className="flex justify-center items-center h-full"><Spinner /></div>;
+      return (
+        <div className='flex justify-center items-center h-full'>
+          <Spinner />
+        </div>
+      );
     }
     if (error) {
-        return <div className="text-red-500 text-center p-4">{error}</div>
+      return <div className='text-red-500 text-center p-4'>{error}</div>;
     }
     if (messages.length === 0) {
-        return (
-            <div className='space-y-4 animate-in fade-in-50 slide-in-from-bottom-4'>
-              <div className='bg-linear-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4 space-y-3'>
-                <div className='flex items-center gap-2'>
-                  <MessageSquare className='h-5 w-5 text-primary' />
-                  <h3 className='font-semibold text-sm'>
-                    Welcome to Support Chat
-                  </h3>
-                </div>
-                <p className='text-sm text-muted-foreground leading-relaxed'>
-                  Our team is here to help you 24/7. Choose a topic below or
-                  type your question.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide px-1'>
-                  Quick Actions
-                </p>
-                <div className='grid grid-cols-2 gap-2'>
-                  {QUICK_ACTIONS.map((action) => (
-                    <Button
-                      key={action.label}
-                      variant='outline'
-                      className='h-auto py-3 px-3 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5 transition-all group'
-                      onClick={() => handleQuickAction(action.label)}
-                    >
-                      <action.icon className='h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors' />
-                      <span className='text-xs font-medium'>
-                        {action.label}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
+      return (
+        <div className='space-y-4 animate-in fade-in-50 slide-in-from-bottom-4'>
+          <div className='bg-linear-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4 space-y-3'>
+            <div className='flex items-center gap-2'>
+              <MessageSquare className='h-5 w-5 text-primary' />
+              <h3 className='font-semibold text-sm'>Welcome to Support Chat</h3>
             </div>
-        )
+            <p className='text-sm text-muted-foreground leading-relaxed'>
+              Our team is here to help you 24/7. Choose a topic below or type
+              your question.
+            </p>
+          </div>
+
+          <div className='space-y-2'>
+            <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide px-1'>
+              Quick Actions
+            </p>
+            <div className='grid grid-cols-2 gap-2'>
+              {QUICK_ACTIONS.map((action) => (
+                <Button
+                  key={action.label}
+                  variant='outline'
+                  className='h-auto py-3 px-3 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5 transition-all group'
+                  onClick={() => handleQuickAction(action.label)}
+                >
+                  <action.icon className='h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors' />
+                  <span className='text-xs font-medium'>{action.label}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
     }
     return (
-        <>
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={cn(
-                  'flex flex-col gap-1',
-                  m.senderId === session?.user.id ? 'items-end' : 'items-start',
-                )}
-              >
-                <div
-                  className={cn(
-                    'w-fit max-w-[85%] rounded-2xl px-4 py-2.5 text-sm wrap-break-word shadow-sm animate-in fade-in-50 slide-in-from-bottom-2',
-                    m.senderId === session?.user.id
-                      ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                      : 'bg-background border rounded-tl-sm',
-                  )}
-                >
-                  {m.content}
-                </div>
-                <span className='text-[10px] text-muted-foreground px-2'>
-                  {formatTime(m.createdAt)}
-                </span>
-              </div>
-            ))}
-        </>
-    )
-
-  }
+      <>
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={cn(
+              'flex flex-col gap-1',
+              m.senderId === session?.user.id ? 'items-end' : 'items-start',
+            )}
+          >
+            <div
+              className={cn(
+                'w-fit max-w-[85%] rounded-2xl px-4 py-2.5 text-sm wrap-break-word shadow-sm animate-in fade-in-50 slide-in-from-bottom-2',
+                m.senderId === session?.user.id
+                  ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                  : 'bg-background border rounded-tl-sm',
+              )}
+            >
+              {m.content}
+            </div>
+            <span className='text-[10px] text-muted-foreground px-2'>
+              {formatTime(m.createdAt)}
+            </span>
+          </div>
+        ))}
+      </>
+    );
+  };
 
   if (!isOpen) {
     return (

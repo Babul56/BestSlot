@@ -203,7 +203,7 @@ export default async function ChatIndexPage() {
                   lastMessage && lastMessage.senderId !== currentUserId;
 
                 return (
-                  <Link key={conv.id} href={`/chat/${conv.id}`}>
+                  <Link key={conv.id} href={`/support/agent/${conv.id}`}>
                     <div className='hover:bg-muted/50 rounded-lg p-3 transition-colors'>
                       <div className='flex items-start space-x-3'>
                         <div className='relative'>

@@ -1,9 +1,5 @@
 'use client';
 
-import { IconArrowDownCircle, IconUserPlus } from '@tabler/icons-react';
-import { Headphones, LayoutDashboard, Moon, Sun, UserCog } from 'lucide-react';
-import Link from 'next/link';
-import { useTheme } from 'next-themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +13,10 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from '@/lib/auth-client';
 import { getInitials } from '@/lib/utils';
+import { IconArrowDownCircle, IconUserPlus } from '@tabler/icons-react';
+import { Headphones, LayoutDashboard, Moon, Sun, UserCog } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import Link from 'next/link';
 import { SignOut } from './logout';
 import { ModeToggle } from './theme-toggle';
 
@@ -161,7 +161,9 @@ export default function UserDropDown() {
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link
-              href='/support'
+              href={
+                session.user.role === 'ADMIN' ? '/support/agent' : '/support'
+              }
               className='flex w-full cursor-pointer items-center justify-between'
             >
               <div className='flex items-center gap-2'>

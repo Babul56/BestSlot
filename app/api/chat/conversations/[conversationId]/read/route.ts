@@ -1,7 +1,7 @@
+import { NextResponse } from 'next/server';
 import { ably } from '@/lib/ably';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { NextResponse } from 'next/server';
 
 export async function POST(
   req: Request,

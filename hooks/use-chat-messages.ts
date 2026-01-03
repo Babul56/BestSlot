@@ -70,23 +70,22 @@ export function useChatMessages({
     }
   }, [syncKey, currentSessionId]);
 
-  // 2. Mark messages as read when new ones arrive
-  useEffect(() => {
-    const unreadMessages = messages.some(
-      (m) => !m.isRead && m.senderId !== currentSessionId,
-    );
-    if (unreadMessages) {
-      const markAsRead = async () => {
-        try {
-          await fetch(`/api/chat/conversations/${conversationId}/read`, {
-            method: 'POST',
-          });
-        } catch (err) {
-          console.error('Failed to mark messages as read.', err);
-        }
-      };
-      const timeoutId = setTimeout(markAsRead, 500);
-      return () => clearTimeout(timeoutId);
+  const markMessagesAsRead = useCallback(async () => {
+    const unreadMessageIds = messages
+      .filter((m) => !m.isRead && m.senderId !== currentSessionId)
+      .map((m) => m.id);
+
+    if (unreadMessageIds.length === 0) {
+      return;
+    }
+
+    try {
+      await fetch(`/api/chat/conversations/${conversationId}/read`, {
+        method: 'POST',
+      });
+      // The source of truth will be the ably 'messages-read' event
+    } catch (err) {
+      console.error('Failed to mark messages as read.', err);
     }
   }, [messages, conversationId, currentSessionId]);
 
@@ -244,5 +243,6 @@ export function useChatMessages({
     retryMessage,
     isLoading,
     error,
+    markMessagesAsRead,
   };
 }

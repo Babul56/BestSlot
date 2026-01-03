@@ -1,3 +1,4 @@
+import { AlertCircle, Clock, Trophy, Wallet } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -6,7 +7,6 @@ import {
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, Clock, Trophy, Wallet } from 'lucide-react';
 
 export function UserContext() {
   return (

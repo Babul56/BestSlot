@@ -46,6 +46,7 @@ export default function ChatConversation() {
     sendMessage,
     retryMessage,
     error: messagesError,
+    markMessagesAsRead,
   } = useChatMessages({
     conversationId,
     session,
@@ -53,6 +54,16 @@ export default function ChatConversation() {
     isConnected,
     initialMessages: conversation?.messages || [],
   });
+
+  useEffect(() => {
+    if (markMessagesAsRead) {
+      markMessagesAsRead(); // On mount
+      window.addEventListener('focus', markMessagesAsRead);
+      return () => {
+        window.removeEventListener('focus', markMessagesAsRead);
+      };
+    }
+  }, [markMessagesAsRead]);
 
   useEffect(() => {
     if (!isSessionPending && authStatus === 'unauthenticated') {

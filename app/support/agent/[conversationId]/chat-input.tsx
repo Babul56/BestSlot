@@ -1,14 +1,13 @@
 import type Ably from 'ably';
 import { Mic, Paperclip, Send } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { EmojiPicker } from '@/components/chat/emoji-picker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { ConversationWithDetails } from '@/hooks/use-chat-data';
 import type { useSession } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
-
-import { EmojiPicker } from './emoji-picker';
 
 // Infer the session type from the useSession hook
 type SessionData = ReturnType<typeof useSession>['data'];

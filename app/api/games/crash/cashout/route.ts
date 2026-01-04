@@ -1,8 +1,8 @@
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma'; // Adjust the import path as needed
 import { Decimal } from '@prisma/client/runtime/client';
 import { headers } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma'; // Adjust the import path as needed
 
 export async function POST(req: NextRequest) {
   try {

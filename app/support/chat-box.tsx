@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 import { EmojiPicker } from '@/components/chat/emoji-picker'; // Added import for EmojiPicker
+import { TypingIndicator } from '@/components/chat/typing-indicator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -74,14 +75,21 @@ type MessageWithSender = Message & {
   isOptimistic?: boolean;
 };
 
+type ConversationWithParticipants = Conversation & {
+  assignedTo: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  } | null;
+};
+
 export function ChatBox() {
   const { data: session, isPending: isSessionPending } = useSession();
 
   const { ably } = usePresenceStore();
 
-  const [conversation, setConversation] = React.useState<Conversation | null>(
-    null,
-  );
+  const [conversation, setConversation] =
+    React.useState<ConversationWithParticipants | null>(null);
 
   const [messages, setMessages] = React.useState<MessageWithSender[]>([]);
 
@@ -96,6 +104,12 @@ export function ChatBox() {
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false); // Added state for emoji picker
 
   const inputRef = React.useRef<HTMLInputElement>(null); // Added ref for input
+  const [isTyping, setIsTyping] = React.useState(false);
+  const [typingUser, setTypingUser] = React.useState<{
+    name: string | null;
+    image: string | null;
+  } | null>(null);
+  const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const scrollAnchorRef = React.useRef<HTMLDivElement>(null);
 
@@ -110,7 +124,7 @@ export function ChatBox() {
     if (isOpen) {
       scrollToBottom();
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isTyping]);
 
   const initConversation = React.useCallback(async () => {
     if (!isOpen || !session || conversation) return;
@@ -124,7 +138,7 @@ export function ChatBox() {
 
       if (!res.ok) throw new Error('Failed to start conversation.');
 
-      const conv: Conversation = await res.json();
+      const conv: ConversationWithParticipants = await res.json();
 
       setConversation(conv);
 
@@ -200,6 +214,7 @@ export function ChatBox() {
 
         return [...prev, { ...incomingMessage, status: 'delivered' }];
       });
+      setIsTyping(false);
     };
 
     const handleMessagesRead = (message: Ably.Message) => {
@@ -214,14 +229,29 @@ export function ChatBox() {
       );
     };
 
-    channel.subscribe('new-message', handleNewMessage);
+    const handleTyping = (message: Ably.Message) => {
+      const { userId, isTyping: typing } = message.data as {
+        userId: string;
+        isTyping: boolean;
+      };
+      if (userId !== currentSessionId) {
+        setIsTyping(typing);
+        if (typing) {
+          setTypingUser(conversation.assignedTo);
+        } else {
+          setTypingUser(null);
+        }
+      }
+    };
 
+    channel.subscribe('new-message', handleNewMessage);
     channel.subscribe('messages-read', handleMessagesRead);
+    channel.subscribe('typing', handleTyping);
 
     return () => {
       channel.unsubscribe();
     };
-  }, [ably, conversation?.id, currentSessionId]);
+  }, [ably, conversation, currentSessionId]);
 
   React.useEffect(() => {
     if (messages.some((m) => !m.isRead && m.senderId !== currentSessionId)) {
@@ -243,8 +273,39 @@ export function ChatBox() {
     }
   }, [messages, conversation?.id, currentSessionId]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    if (!ably || !conversation?.id || !currentSessionId) return;
+
+    const channel = ably.channels.get(`chat:${conversation.id}`);
+
+    const isTyping = value.length > 0;
+    channel.publish('typing', { userId: currentSessionId, isTyping });
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    if (isTyping) {
+      typingTimeoutRef.current = setTimeout(() => {
+        channel.publish('typing', {
+          userId: currentSessionId,
+          isTyping: false,
+        });
+      }, 3000);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || !conversation?.id || !session?.user) return;
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    const channel = ably?.channels.get(`chat:${conversation.id}`);
+    channel?.publish('typing', { userId: currentSessionId, isTyping: false });
 
     const optimisticId = window.crypto.randomUUID();
 
@@ -508,6 +569,7 @@ export function ChatBox() {
             </div>
           </div>
         ))}
+        {isTyping && <TypingIndicator user={typingUser} />}
       </>
     );
   };
@@ -607,7 +669,7 @@ export function ChatBox() {
               ref={inputRef} // Added ref to input
               placeholder='Type your message...'
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               className='flex-1 border-muted focus-visible:ring-primary h-11 rounded-xl pr-10' // Adjusted padding-right
               autoFocus
               disabled={!conversation || loading || !session}

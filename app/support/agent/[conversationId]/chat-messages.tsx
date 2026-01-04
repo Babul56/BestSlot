@@ -40,7 +40,7 @@ export function ChatMessages({
   // biome-ignore lint/correctness/useExhaustiveDependencies: this is fine
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isTyping]);
 
   const formatMessageDate = (date: Date) => {
     if (isToday(date)) {

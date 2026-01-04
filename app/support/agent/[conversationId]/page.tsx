@@ -45,6 +45,7 @@ export default function ChatConversation() {
     isTyping,
     sendMessage,
     retryMessage,
+    deleteMessage,
     error: messagesError,
     markMessagesAsRead,
   } = useChatMessages({
@@ -144,6 +145,7 @@ export default function ChatConversation() {
           session={session}
           isTyping={isTyping}
           onRetryMessage={retryMessage}
+          onDeleteMessage={deleteMessage}
         />
 
         <ChatInput

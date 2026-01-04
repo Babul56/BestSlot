@@ -26,6 +26,7 @@ interface ChatMessagesProps {
   session: SessionData;
   isTyping: boolean;
   onRetryMessage: (messageId: string) => void;
+  onDeleteMessage: (messageId: string) => void;
 }
 
 export function ChatMessages({
@@ -34,6 +35,7 @@ export function ChatMessages({
   session,
   isTyping,
   onRetryMessage,
+  onDeleteMessage,
 }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +87,7 @@ export function ChatMessages({
                     message={message}
                     isCurrentUser={isCurrentUser}
                     onRetry={onRetryMessage}
+                    onDelete={onDeleteMessage}
                   />
                 </div>
               );

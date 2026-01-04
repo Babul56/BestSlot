@@ -146,9 +146,15 @@ export function useChatMessages({
       }
     };
 
+    const handleMessageDeleted = (message: Ably.Message) => {
+      const { messageId } = message.data;
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    };
+
     channel.subscribe('new-message', handleNewMessage);
     channel.subscribe('messages-read', handleMessagesRead);
     channel.subscribe('typing', handleTyping);
+    channel.subscribe('message-deleted', handleMessageDeleted);
 
     return () => {
       channel.unsubscribe();
@@ -233,21 +239,45 @@ export function useChatMessages({
     [conversationId, session?.user],
   );
 
+  const deleteMessage = useCallback(
+    async (messageId: string) => {
+      const originalMessages = messages;
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+
+      try {
+        const response = await fetch(`/api/chat/messages/${messageId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          setMessages(originalMessages);
+          setError('Failed to delete message.');
+        }
+      } catch (_error) {
+        setMessages(originalMessages);
+        setError('Failed to delete message.');
+      }
+    },
+    [messages],
+  );
+
   const retryMessage = useCallback(
     async (messageId: string) => {
       const failedMessage = messages.find((m) => m.id === messageId);
       if (failedMessage) {
-        const newOptimisticId = messageId.startsWith('temp-')
-          ? messageId.substring(5)
-          : window.crypto.randomUUID();
-        setMessages((prev) => prev.filter((m) => m.id !== messageId));
-        await sendMessage(
-          failedMessage.content,
-          newOptimisticId,
-          failedMessage.type,
-          failedMessage.fileUrl || undefined,
-          failedMessage.publicId || undefined,
-        );
+        if (failedMessage.type === 'TEXT' || failedMessage.type === 'IMAGE') {
+          const newOptimisticId = messageId.startsWith('temp-')
+            ? messageId.substring(5)
+            : window.crypto.randomUUID();
+          setMessages((prev) => prev.filter((m) => m.id !== messageId));
+          await sendMessage(
+            failedMessage.content,
+            newOptimisticId,
+            failedMessage.type,
+            failedMessage.fileUrl || undefined,
+            failedMessage.publicId || undefined,
+          );
+        }
       }
     },
     [messages, sendMessage],
@@ -265,6 +295,7 @@ export function useChatMessages({
       const optimisticId = window.crypto.randomUUID();
       await sendMessage(content, optimisticId, type, fileUrl, publicId);
     },
+    deleteMessage,
     retryMessage,
     isLoading,
     error,

@@ -5,11 +5,11 @@ import { AlertCircle, Check, CheckCheck } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { MessageWithSender } from '@/hooks/use-chat-messages'; // Import the type
+import type { MessageWithSender } from '@/hooks/use-chat-messages';
 import { cn, getInitials } from '@/lib/utils';
 
 interface MessageBubbleProps {
-  message: MessageWithSender; // Use the correct type
+  message: MessageWithSender;
   isCurrentUser: boolean;
   onRetry: (messageId: string) => void;
 }
@@ -17,9 +17,7 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, isCurrentUser }: MessageBubbleProps) {
   const [imageError, setImageError] = useState(false);
 
-  const formatMessageTime = (date: Date) => {
-    return format(date, 'hh:mm:aa');
-  };
+  const formatMessageTime = (date: Date) => format(date, 'hh:mm aa');
 
   const getMessageStatusIcon = (status?: string) => {
     switch (status) {
@@ -40,81 +38,81 @@ export function MessageBubble({ message, isCurrentUser }: MessageBubbleProps) {
     }
   };
 
-  const renderAvatar = () => {
-    if (isCurrentUser) return null;
-    return (
-      <Avatar className='h-8 w-8 shrink-0 shadow-sm'>
-        {message.sender?.image && !imageError ? (
-          <div className='relative h-full w-full overflow-hidden rounded-full'>
-            <Image
-              src={message.sender.image || '/placeholder.svg'}
-              alt='name'
-              fill
-              className='object-cover'
-              sizes='32px'
-              onError={() => setImageError(true)}
-              onLoad={() => setImageError(false)}
-            />
-          </div>
-        ) : (
-          <AvatarFallback className='text-xs'>
-            {getInitials(message.sender.name)}
-          </AvatarFallback>
-        )}
-      </Avatar>
-    );
-  };
-
-  const renderMessageStatus = () => {
-    if (!isCurrentUser) return null;
-    return (
-      <div className='flex items-center gap-1'>
-        {getMessageStatusIcon(message.status)}
-      </div>
-    );
-  };
-
   return (
     <div
       className={cn(
-        'flex mb-2', // Reduced margin-bottom
+        'flex w-full mb-4',
         isCurrentUser ? 'justify-end' : 'justify-start',
       )}
     >
       <div
         className={cn(
-          'flex max-w-[75%] items-end gap-2', // Reduced gap
-          isCurrentUser ? 'flex-row-reverse' : '',
+          'flex max-w-[75%] gap-2',
+          isCurrentUser ? 'flex-row-reverse' : 'flex-row',
         )}
       >
-        {renderAvatar()}
+        {/* Avatar */}
+        {!isCurrentUser && (
+          <Avatar className='h-8 w-8 shrink-0 self-end'>
+            {message.sender?.image && !imageError ? (
+              <div className='relative h-full w-full overflow-hidden rounded-full'>
+                <Image
+                  src={message.sender.image}
+                  alt='avatar'
+                  fill
+                  className='object-cover'
+                  onError={() => setImageError(true)}
+                />
+              </div>
+            ) : (
+              <AvatarFallback className='text-xs'>
+                {getInitials(message.sender.name)}
+              </AvatarFallback>
+            )}
+          </Avatar>
+        )}
+
+        {/* Message Content + Outside Metadata */}
         <div
           className={cn(
-            'relative max-w-full rounded-xl px-3 py-2 shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl', // Reduced padding and rounded-xl for a slightly tighter look
-            isCurrentUser
-              ? 'rounded-br-none bg-slate-950 text-white dark:bg-black'
-              : 'bg-background/80 dark:bg-secondary text-foreground rounded-bl-none border border-border/50',
-            message.type === 'IMAGE' && 'p-0 overflow-hidden',
+            'flex flex-col gap-1',
+            isCurrentUser ? 'items-end' : 'items-start',
           )}
         >
-          {message.type === 'IMAGE' && message.fileUrl ? (
-            <Image
-              src={message.fileUrl}
-              alt='sent image'
-              width={300}
-              height={300}
-              className='object-cover'
-            />
-          ) : (
-            <p className='text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
-              {message.content}
-            </p>
-          )}
-          <div className='text-muted-foreground dark:text-accent-foreground mt-1 flex items-center justify-end gap-2'>
-            <span className='text-xs opacity-70'>
+          <div
+            className={cn(
+              'relative rounded-lg px-3 py-2 shadow-sm transition-all',
+              isCurrentUser
+                ? 'rounded-br-none bg-slate-950 text-white dark:bg-primary'
+                : 'rounded-bl-none bg-secondary text-secondary-foreground border border-border/50',
+              message.type === 'IMAGE' && 'p-0 rounded-lg overflow-hidden',
+            )}
+          >
+            {message.type === 'IMAGE' && message.fileUrl ? (
+              <Image
+                src={message.fileUrl}
+                alt='sent'
+                width={300}
+                height={300}
+                className='object-cover rounded-lg'
+              />
+            ) : (
+              <p className='text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
+                {message.content}
+              </p>
+            )}
+          </div>
+
+          {/* METADATA OUTSIDE BUBBLE */}
+          <div className='flex items-center gap-1.5 px-1'>
+            <span className='text-[10px] font-medium text-muted-foreground uppercase'>
               {formatMessageTime(message.createdAt)}
             </span>
-            {renderMessageStatus()}
+            {isCurrentUser && (
+              <span className='text-muted-foreground'>
+                {getMessageStatusIcon(message.status)}
+              </span>
+            )}
           </div>
         </div>
       </div>

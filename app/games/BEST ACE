@@ -1,0 +1,60 @@
+import { useEffect, useRef, useState } from "react";
+
+const WIDTH = 800; const HEIGHT = 600; const PLAYER_SIZE = 50; const ENEMY_SIZE = 50; const FPS = 60;
+
+export default function JiliSuperAce() { const canvasRef = useRef(null); const [playerX, setPlayerX] = useState(WIDTH / 2 - PLAYER_SIZE / 2); const playerY = HEIGHT - PLAYER_SIZE - 10; const [enemy, setEnemy] = useState({ x: Math.random() * (WIDTH - ENEMY_SIZE), y: -ENEMY_SIZE, }); const [keys, setKeys] = useState({}); const [running, setRunning] = useState(true);
+
+// Keyboard handling useEffect(() => { const down = (e) => setKeys((k) => ({ ...k, [e.key]: true })); const up = (e) => setKeys((k) => ({ ...k, [e.key]: false })); window.addEventListener("keydown", down); window.addEventListener("keyup", up); return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); }; }, []);
+
+// Game loop useEffect(() => { if (!running) return;
+
+const ctx = canvasRef.current.getContext("2d");
+const interval = setInterval(() => {
+  // Update player
+  setPlayerX((x) => {
+    if (keys.ArrowLeft && x > 0) return x - 5;
+    if (keys.ArrowRight && x < WIDTH - PLAYER_SIZE) return x + 5;
+    return x;
+  });
+
+  // Update enemy
+  setEnemy((e) => {
+    let newY = e.y + 3;
+    if (newY > HEIGHT) {
+      return {
+        x: Math.random() * (WIDTH - ENEMY_SIZE),
+        y: -ENEMY_SIZE,
+      };
+    }
+    return { ...e, y: newY };
+  });
+
+  // Clear screen
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+  // Draw player
+  ctx.fillStyle = "green";
+  ctx.fillRect(playerX, playerY, PLAYER_SIZE, PLAYER_SIZE);
+
+  // Draw enemy
+  ctx.fillStyle = "red";
+  ctx.fillRect(enemy.x, enemy.y, ENEMY_SIZE, ENEMY_SIZE);
+
+  // Collision detection
+  if (
+    playerX < enemy.x + ENEMY_SIZE &&
+    playerX + PLAYER_SIZE > enemy.x &&
+    playerY < enemy.y + ENEMY_SIZE &&
+    playerY + PLAYER_SIZE > enemy.y
+  ) {
+    alert("Game Over!");
+    setRunning(false);
+  }
+}, 1000 / FPS);
+
+return () => clearInterval(interval);
+
+}, [keys, enemy, playerX, running]);
+
+return ( <div style={{ textAlign: "center" }}> <h2>Jili Super Ace (React)</h
